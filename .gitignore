@@ -1,0 +1,14 @@
+# 忽略掉数量最大的文件夹
+data/
+results/
+results_test/
+checkpoints/
+
+# 忽略 Python 缓存
+__pycache__/
+*.py[cod]
+
+# 忽略图片文件（如果你不需要备份结果图）
+*.png
+*.jpg
+*.jpeg
