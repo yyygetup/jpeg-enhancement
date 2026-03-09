@@ -21,8 +21,8 @@
 ├── data/               # (Git 忽略) 存放训练与测试数据集
 ├── checkpoints/        # (Git 忽略) 存放训练好的模型权重
 └── results/            # (Git 忽略) 存放增强后的对比结果图
-
- ##  环境要求
+```
+##  环境要求
 Python: 3.8+
 
 框架: PyTorch
@@ -36,16 +36,21 @@ Python: 3.8+
 ```python
 python generate_data.py
 python data_split.py
-
+```
 2. 模型训练
 启动训练过程，权重将默认保存至 checkpoints/ 文件夹：
+
 ```python
 python train.py 
+```
 
 3. 性能评估
 在测试集上运行推理并查看指标结果：
+
 ```python
-python test.py 
+python test.py
+```
+ 
 ##  备注
 本模块目前作为独立子项目在 GitHub 维护，后续将与 FAST-JPEG-MAIN 主框架进行深度整合。
 Author: yangjingwen
