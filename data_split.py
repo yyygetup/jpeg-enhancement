@@ -28,7 +28,7 @@ def split_dataset(source_dir, train_dir, test_dir, split_ratio=0.8):
         print("原始文件夹里没有图片！")
         return
 
-    print(f"📦 找到总计 {total_imgs} 张图片。")
+    print(f" 找到总计 {total_imgs} 张图片。")
 
     # 3. 【核心】打乱顺序，保证随机性
     random.seed(42)  # 固定随机种子，保证每次运行划分结果一样
@@ -39,7 +39,7 @@ def split_dataset(source_dir, train_dir, test_dir, split_ratio=0.8):
     train_files = all_files[:train_count]
     test_files = all_files[train_count:]
 
-    print(f"🔪 按照 {split_ratio*100}% : {(1-split_ratio)*100}% 比例划分...")
+    print(f" 按照 {split_ratio*100}% : {(1-split_ratio)*100}% 比例划分...")
     print(f"   -> 训练集将分配: {len(train_files)} 张")
     print(f"   -> 测试集将分配: {len(test_files)} 张")
 
