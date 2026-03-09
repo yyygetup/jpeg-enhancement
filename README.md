@@ -26,6 +26,11 @@
 Python: 3.8+
 
 框架: PyTorch
+本项目依赖 Mamba 架构，请按顺序执行以下命令进行安装：
+```bash
+pip install causal-conv1d>=1.2.0
+pip install mamba-ssm
+```
 
 领域知识: 视频压缩与图像编码相关技术
 
