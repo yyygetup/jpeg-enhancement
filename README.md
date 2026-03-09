@@ -22,14 +22,14 @@
 ├── checkpoints/        # (Git 忽略) 存放训练好的模型权重
 └── results/            # (Git 忽略) 存放增强后的对比结果图
 
-## 环境要求
+ ##  环境要求
 Python: 3.8+
 
 框架: PyTorch
 
 领域知识: 视频压缩与图像编码相关技术
 
-## 快速开始
+##  快速开始
 1. 数据准备
 首先，你需要生成成对的（原图 vs 压缩图）训练数据：
 
@@ -46,7 +46,7 @@ python train.py
 在测试集上运行推理并查看指标结果：
 ```python
 python test.py 
-## 备注
+##  备注
 本模块目前作为独立子项目在 GitHub 维护，后续将与 FAST-JPEG-MAIN 主框架进行深度整合。
 Author: yangjingwen
 
