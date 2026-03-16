@@ -145,4 +145,4 @@ if __name__ == "__main__":
     WEIGHT_FILE = r"./checkpoints/sci_model_epoch_99.pth" 
     
     # 开始测试
-    evaluate_all_qualities(TEST_HQ, TEST_LQ_BASE, OUTPUT_BASE, WEIGHT_FILE, q_list=[10, 20, 30, 40])
+    evaluate_all_qualities(TEST_HQ, TEST_LQ_BASE, OUTPUT_BASE, WEIGHT_FILE, q_list=[50, 60, 70, 80])

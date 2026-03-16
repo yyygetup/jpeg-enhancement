@@ -86,7 +86,7 @@ class SCIEnhancementNet(nn.Module):
         self.edge_branch = BinarizedEdgeBranch(in_channels=in_channels)
         self.conv_in = nn.Conv2d(in_channels, feat_channels, 3, padding=1)
         
-        # 连续堆叠2个真 Mamba Block 构成一个 Group，能力远超 GRU
+        # 连续堆叠2个 Mamba Block 构成一个 Group
         self.mamba_group1 = nn.Sequential(*[Real2DMambaBlock(feat_channels) for _ in range(2)])
         self.sft1 = SpatialFeatureModulation(mask_channels=1, feat_channels=feat_channels)
         

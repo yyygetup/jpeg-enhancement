@@ -48,5 +48,5 @@ if __name__ == "__main__":
     LQ_FOLDER = r"./data/test_lq"
     
     print("开始生成固定质量测试集...")
-    generate_standard_test_set(HQ_FOLDER, LQ_FOLDER)
+    generate_standard_test_set(HQ_FOLDER, LQ_FOLDER,q_list=[50, 60, 70, 80])
     print("代码执行结束！")
