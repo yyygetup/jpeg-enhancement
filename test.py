@@ -10,7 +10,7 @@ from skimage.metrics import peak_signal_noise_ratio as calculate_psnr
 from skimage.metrics import structural_similarity as calculate_ssim
 
 # 导入你的真 Mamba 网络
-from sci_enhancer import SCIEnhancementNet
+from sci_enhancer import SCIEnhancementNet,BaselineNet
 
 # 开启 CUDNN 极致加速
 torch.backends.cudnn.enabled = True 
@@ -26,8 +26,17 @@ def tensor_to_uint8_numpy(tensor):
 def evaluate_all_qualities(hq_dir, lq_base_dir, output_base_dir, weight_path, q_list=[10, 20, 30, 40]):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # 1. 召唤你的满级 Mamba
-    model = SCIEnhancementNet().to(device)
+
+    # model = SCIEnhancementNet().to(device)
+    is_baseline = True  # 【测试开关：对应你训练时的配置】
+    
+    if is_baseline:
+        print(" 正在评测: BaselineNet")
+        model = BaselineNet().to(device)
+    else:
+        print(" 正在评测: SCIEnhancementNet (完全体)")
+        model = SCIEnhancementNet().to(device)
+    
     if not os.path.exists(weight_path):
         print(f" 找不到权重文件: {weight_path}")
         return
@@ -82,8 +91,16 @@ def evaluate_all_qualities(hq_dir, lq_base_dir, output_base_dir, weight_path, q_
                 lq_tensor = transform(lq_img).unsqueeze(0).to(device)
                 
                 # enhanced_tensor, _ = model(lq_tensor, temperature=0.01)
+                # with torch.autocast(device_type='cuda', dtype=torch.float16):
+                #     enhanced_tensor, _ = model(lq_tensor, temperature=0.01)
+                
                 with torch.autocast(device_type='cuda', dtype=torch.float16):
-                    enhanced_tensor, _ = model(lq_tensor, temperature=0.01)
+                    if is_baseline:
+                        # Baseline 专属推理：没有温度参数，只有一个输出
+                        enhanced_tensor = model(lq_tensor)
+                    else:
+                        # 完全体专属推理：带温度参数，双输出（用 _ 丢弃不需要的掩码）
+                        enhanced_tensor, _ = model(lq_tensor, temperature=0.01)
                 
                 # 转换格式准备给裁判打分
                 hq_np = np.array(hq_img)
@@ -139,10 +156,10 @@ if __name__ == "__main__":
     # 路径配置 (确保你在 enhancement 文件夹下运行)
     TEST_HQ = r"./data/test_hq"              # 高清原图标准答案
     TEST_LQ_BASE = r"./data/test_lq"         # 刚刚生成的带 Q 档位马赛克的考卷
-    OUTPUT_BASE = r"./results_test"          # Mamba 修复后输出的高清图
+    OUTPUT_BASE = r"./results_test_basic"          # Mamba 修复后输出的高清图
     
     # 换成你跑得最好的一轮权重 (比如 epoch_99 或者是你保存的最好权重)
     WEIGHT_FILE = r"./checkpoints/sci_model_epoch_99.pth" 
     
     # 开始测试
-    evaluate_all_qualities(TEST_HQ, TEST_LQ_BASE, OUTPUT_BASE, WEIGHT_FILE, q_list=[50, 60, 70, 80])
+    evaluate_all_qualities(TEST_HQ, TEST_LQ_BASE, OUTPUT_BASE, WEIGHT_FILE, q_list=[10,20,30,40,50,60])
