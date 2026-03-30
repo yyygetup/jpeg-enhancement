@@ -7,7 +7,7 @@ from torch import amp
 from tqdm import tqdm
 import torchvision
 
-from sci_enhancer import SCIEnhancementNet, SCILoss
+from sci_enhancer import SCIEnhancementNet, SCILoss,BaselineNet
 from dataset import SCIDataset
 
 # 真 Mamba 极度依赖 CUDNN 加速，绝对要开启！
@@ -25,16 +25,30 @@ def train():
     
     learning_rate = 2e-4
     
-    hq_folder = "./data/train_hq" 
-    lq_folder = "./data/train_lq" 
+    hq_folder = "./data/train_hq_SCID" 
+    lq_folder = "./data/train_lq_SCID" 
     
     dataset = SCIDataset(hq_dir=hq_folder, patch_size=patch_size)
     # pin_memory=True 开启锁页内存，数据向 GPU 传输更快
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, 
                             num_workers=num_workers, pin_memory=True)
-
-    model = SCIEnhancementNet().to(device)
-    criterion = SCILoss().to(device)
+    
+    #--------消融实验-------------
+    
+    is_baseline = True  # 【改成 True 跑 Model A，改成 False 跑完全体】
+    
+    if is_baseline:
+        print(" 正在训练: BaselineNet (纯原生 Mamba, 仅 MSE Loss)")
+        model = BaselineNet().to(device)
+        criterion = torch.nn.MSELoss().to(device) # Baseline 只能用最普通的 MSE
+    else:
+        print(" 正在训练: SCIEnhancementNet (完全体, 含混合 Loss)")
+        model = SCIEnhancementNet().to(device)
+        criterion = SCILoss().to(device)
+    
+    #---------------------------------
+    
+    # criterion = SCILoss().to(device)
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
 
     scaler = amp.GradScaler('cuda')
@@ -54,10 +68,21 @@ def train():
             optimizer.zero_grad()
             
             with amp.autocast('cuda'):
-                pred_img, mask_pred = model(lq_img, temperature=current_temp)
-                total_loss, loss_mse, loss_polar, loss_trans = criterion(
-                    pred_img, hq_img, mask_pred, gt_mask
-                )
+                # pred_img, mask_pred = model(lq_img, temperature=current_temp)
+                # total_loss, loss_mse, loss_polar, loss_trans = criterion(
+                #     pred_img, hq_img, mask_pred, gt_mask
+                # )
+                if is_baseline:
+                    # Baseline 专属前向传播：单输入，单输出，普通 Loss
+                    pred_img = model(lq_img)
+                    total_loss = criterion(pred_img, hq_img)
+                    loss_mse = total_loss # 为了能在终端打印，把 total_loss 赋给 loss_mse
+                else:
+                    # 完全体专属前向传播：带温度参数，双输出，混合 Loss
+                    pred_img, mask_pred = model(lq_img, temperature=current_temp)
+                    total_loss, loss_mse, loss_polar, loss_trans = criterion(
+                        pred_img, hq_img, mask_pred, gt_mask
+                    )
 
             scaler.scale(total_loss).backward()
             scaler.step(optimizer)

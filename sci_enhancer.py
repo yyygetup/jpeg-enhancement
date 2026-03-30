@@ -136,3 +136,73 @@ class SCILoss(nn.Module):
         loss_trans = self.transition_penalty_loss(pred_img, gt_img, gt_mask)
         total_loss = loss_mse + 0.001 * loss_polar + 0.005 * loss_trans
         return total_loss, loss_mse, loss_polar, loss_trans
+    
+    
+    
+# baseline model
+
+class Baseline2DMambaBlock(nn.Module):
+    def __init__(self, channels):
+        super().__init__()
+        self.norm = nn.LayerNorm(channels)
+        
+        # 纯 Mamba 核心
+        self.mamba = Mamba(
+            d_model=channels, 
+            d_state=16,       
+            d_conv=4,         
+            expand=2,         
+        )
+        #  删除了 self.linear_fuse (Concat+Linear 的核心)
+
+    def forward(self, x):
+        B, C, H, W = x.shape
+        x_flat = x.flatten(2).transpose(1, 2) 
+        x_norm = self.norm(x_flat)
+        
+        scan_tl_br = x_norm
+        scan_br_tl = torch.flip(x_norm, dims=[1])
+        x_norm_t = x_norm.view(B, H, W, C).transpose(1, 2).reshape(B, H*W, C)
+        scan_tr_bl = x_norm_t
+        scan_bl_tr = torch.flip(x_norm_t, dims=[1])
+        
+        out_tl_br = self.mamba(scan_tl_br)
+        out_br_tl = torch.flip(self.mamba(scan_br_tl), dims=[1]) 
+        out_tr_bl = self.mamba(scan_tr_bl).view(B, W, H, C).transpose(1, 2).reshape(B, H*W, C)
+        out_bl_tr = torch.flip(self.mamba(scan_bl_tr), dims=[1]).view(B, W, H, C).transpose(1, 2).reshape(B, H*W, C)
+        
+        #  核心改变：纯原生做法是直接将四向特征相加 (Summation)
+        fused = out_tl_br + out_br_tl + out_tr_bl + out_bl_tr
+        
+        out = fused.transpose(1, 2).view(B, C, H, W)
+        return x + out
+    
+    
+class BaselineNet(nn.Module):
+    def __init__(self, in_channels=3, feat_channels=64):
+        super().__init__()
+        #  删除了 self.edge_branch
+        self.conv_in = nn.Conv2d(in_channels, feat_channels, 3, padding=1)
+        
+        # 替换为刚刚写好的 Baseline Block
+        self.mamba_group1 = nn.Sequential(*[Baseline2DMambaBlock(feat_channels) for _ in range(2)])
+        #  删除了 self.sft1
+        
+        self.mamba_group2 = nn.Sequential(*[Baseline2DMambaBlock(feat_channels) for _ in range(2)])
+        #  删除了 self.sft2
+        
+        self.conv_out = nn.Conv2d(feat_channels, in_channels, 3, padding=1)
+
+    def forward(self, x):
+        #  没有 mask_pred 的生成了
+        feat = F.relu(self.conv_in(x))
+        
+        # 纯粹的串联前向传播
+        feat = self.mamba_group1(feat)
+        feat = self.mamba_group2(feat)
+        
+        out = self.conv_out(feat) + x
+        out = torch.clamp(out, min=0.0, max=1.0)
+        
+        #  仅返回图像，不返回掩码
+        return out
